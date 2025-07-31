@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Locator: Day & Night Edition</title>
+    
+    <!-- Leaflet for mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;700&display=swap');
+
+        :root {
+            /* Dark theme (brightened) */
+            --dark-bg: #1a1a2e;
+            --dark-darker-bg: #16213e;
+            --dark-text: #eee8f5;
+            --dark-hud-bg: rgba(26, 26, 46, 0.9);
+            --dark-glass-bg: rgba(255, 255, 255, 0.08);
+            --dark-glass-border: rgba(255, 255, 255, 0.15);
+            --dark-accent: #00f5ff;
+            --dark-success: #39ff14;
+            --dark-danger: #ff073a;
+            --dark-warning: #ffc107;
+            
+            /* Light theme */
+            --light-bg: #f0f2f5;
+            --light-darker-bg: #e3e7ea;
+            --light-text: #2c3e50;
+            --light-hud-bg: rgba(255, 255, 255, 0.9);
+            --light-glass-bg: rgba(255, 255, 255, 0.6);
+            --light-glass-border: rgba(0, 0, 0, 0.1);
+            --light-accent: #3498db;
+            --light-success: #27ae60;
+            --light-danger: #e74c3c;
+            --light-warning: #f39c12;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            transition: all 0.5s ease;
+        }
+
+        /* Dark theme styles */
+        body.dark-theme {
+            background: linear-gradient(135deg, var(--dark-darker-bg) 0%, var(--dark-bg) 100%);
+            color: var(--dark-text);
+        }
+
+        body.dark-theme .bg-animation {
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(57, 255, 20, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(191, 0, 255, 0.12) 0%, transparent 50%);
+        }
+
+        /* Light theme styles */
+        body.light-theme {
+            background: linear-gradient(135deg, var(--light-bg) 0%, var(--light-darker-bg) 100%);
+            color: var(--light-text);
+        }
+
+        body.light-theme .bg-animation {
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(52, 152, 219, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(39, 174, 96, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(155, 89, 182, 0.08) 0%, transparent 50%);
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            animation: bgShift 20s ease-in-out infinite;
+        }
+
+        @keyframes bgShift {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(-10px) translateY(-10px); }
+            50% { transform: translateX(10px) translateY(10px); }
+            75% { transform: translateX(-5px) translateY(15px); }
+        }
+
+        /* Glass morphism UI */
+        .glass {
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .dark-theme .glass {
+            background: var(--dark-glass-bg);
+            border: 1px solid var(--dark-glass-border);
+        }
+
+        .light-theme .glass {
+            background: var(--light-glass-bg);
+            border: 1px solid var(--light-glass-border);
+        }
+
+        .neon-text {
+            font-family: 'Orbitron', monospace;
+            text-shadow: 
+                0 0 5px currentColor,
+                0 0 10px currentColor,
+                0 0 15px currentColor;
+            animation: neonGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes neonGlow {
+            from { text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor; }
+            to { text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor; }
+        }
+
+        /* Main containers */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #map-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #map-container.loaded {
+            opacity: 1;
+        }
+
+        /* HUD Elements */
+        .hud {
+            position: absolute;
+            z-index: 1000;
+            padding: 15px 25px;
+            transition: all 0.3s ease;
+        }
+
+        #mode-controls {
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #target-display {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            min-width: 400px;
+        }
+
+        #target-name {
+            font-size: 2.5em;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .dark-theme #target-name {
+            color: var(--dark-accent);
+        }
+
+        .light-theme #target-name {
+            color: var(--light-accent);
+        }
+
+        #game-stats {
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 1.2em;
+        }
+
+        #timer-display {
+            bottom: 20px;
+            right: 20px;
+            font-family: 'Orbitron', monospace;
+            font-size: 3em;
+            font-weight: 700;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .dark-theme #timer-display {
+            color: var(--dark-success);
+        }
+
+        .light-theme #timer-display {
+            color: var(--light-success);
+        }
+
+        #timer-display.warning {
+            animation: pulse 1s infinite;
+        }
+
+        .dark-theme #timer-display.warning {
+            color: var(--dark-danger);
+        }
+
+        .light-theme #timer-display.warning {
+            color: var(--light-danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Controls */
+        .control-btn, .control-select {
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid;
+        }
+
+        .dark-theme .control-btn, .dark-theme .control-select {
+            background: var(--dark-glass-bg);
+            border-color: var(--dark-glass-border);
+            color: var(--dark-text);
+        }
+
+        .light-theme .control-btn, .light-theme .control-select {
+            background: var(--light-glass-bg);
+            border-color: var(--light-glass-border);
+            color: var(--light-text);
+        }
+
+        .control-btn:hover, .control-select:hover {
+            transform: translateY(-2px);
+        }
+
+        .dark-theme .control-btn:hover, .dark-theme .control-select:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--dark-accent);
+            box-shadow: 0 0 15px var(--dark-accent);
+        }
+
+        .light-theme .control-btn:hover, .light-theme .control-select:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: var(--light-accent);
+            box-shadow: 0 0 15px var(--light-accent);
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            text-align: center;
+            min-width: 450px;
+            padding: 40px;
+        }
+
+        .overlay h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .dark-theme .overlay h1 {
+            color: var(--dark-accent);
+        }
+
+        .light-theme .overlay h1 {
+            color: var(--light-accent);
+        }
+
+        .overlay button {
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dark-theme .overlay button {
+            background: linear-gradient(45deg, var(--dark-accent), #bf00ff);
+        }
+
+        .light-theme .overlay button {
+            background: linear-gradient(45deg, var(--light-accent), #8e44ad);
+        }
+
+        .overlay button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading-animation {
+            width: 60px;
+            height: 60px;
+            border: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        .dark-theme .loading-animation {
+            border-top: 3px solid var(--dark-accent);
+        }
+
+        .light-theme .loading-animation {
+            border-top: 3px solid var(--light-accent);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .score-change {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', monospace;
+            font-size: 2em;
+            font-weight: 700;
+            pointer-events: none;
+            z-index: 1500;
+            animation: scoreFloat 2s ease-out forwards;
+        }
+
+        .dark-theme .score-change.score-positive { color: var(--dark-success); }
+        .dark-theme .score-change.score-negative { color: var(--dark-danger); }
+        .light-theme .score-change.score-positive { color: var(--light-success); }
+        .light-theme .score-change.score-negative { color: var(--light-danger); }
+
+        @keyframes scoreFloat {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -150px) scale(1.5); }
+        }
+
+        .highlight-score {
+            font-weight: bold;
+        }
+
+        .dark-theme .highlight-score {
+            color: var(--dark-warning);
+        }
+
+        .light-theme .highlight-score {
+            color: var(--light-warning);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #target-name { font-size: 1.8em; }
+            #timer-display { font-size: 2em; }
+            .overlay { min-width: 90vw; padding: 20px; }
+            #mode-controls { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="bg-animation"></div>
+    
+    <div id="game-container">
+        <!-- Leaflet Map Container -->
+        <div id="map-container"></div>
+        
+        <!-- HUD Elements -->
+        <div id="mode-controls" class="hud glass">
+            <button id="theme-toggle" class="control-btn">☀️ Day Mode</button>
+            <select id="game-mode" class="control-select">
+                <option value="countries">World Countries</option>
+                <option value="us-states">US States</option>
+                <option value="world-cities">Major Cities</option>
+                <option value="european-countries">European Countries</option>
+                <option value="asian-countries">Asian Countries</option>
+            </select>
+            <select id="difficulty" class="control-select">
+                <option value="easy">Easy (45s)</option>
+                <option value="medium" selected>Medium (30s)</option>
+                <option value="hard">Hard (15s)</option>
+            </select>
+            <button id="audio-toggle" class="control-btn">🔊 Audio</button>
+        </div>
+
+        <div id="target-display" class="hud glass">
+            <div id="target-name" class="neon-text">Loading...</div>
+        </div>
+
+        <div id="game-stats" class="hud glass">
+            <div>Score: <span id="current-score" class="neon-text highlight-score">5000</span></div>
+            <div>High Score: <span id="high-score" class="highlight-score">0</span></div>
+            <div>Round: <span id="round-counter">1</span></div>
+            <div>Streak: <span id="streak-counter">0</span></div>
+        </div>
+
+        <div id="timer-display" class="hud glass neon-text">30</div>
+    </div>
+
+    <!-- Overlays -->
+    <div id="loading-screen" class="overlay glass">
+        <h1 class="neon-text">Loading Earth Data...</h1>
+        <div class="loading-animation"></div>
+        <p id="loading-status">Initializing...</p>
+    </div>
+
+    <div id="game-over-screen" class="overlay glass" style="display: none;">
+        <h1 class="neon-text">Mission Complete!</h1>
+        <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <span id="final-score" class="neon-text highlight-score">0</span></p>
+        <p id="high-score-message" class="highlight-score" style="font-weight: bold; display: none;">🚀 NEW HIGH SCORE! 🚀</p>
+        <button id="restart-btn">Launch New Mission</button>
+        <button id="mode-change-btn">Change Parameters</button>
+    </div>
+
+    <div id="result-overlay" class="overlay glass" style="display: none;">
+        <h2 id="result-distance" class="neon-text">0 km away</h2>
+        <p id="result-score-text" style="font-size: 1.3em; margin: 15px 0;">Score: +0</p>
+        <p id="result-accuracy">Accuracy: 0%</p>
+        <button id="next-round-btn">Next Target</button>
+        <button id="skip-round-btn">Skip (-500)</button>
+    </div>
+
+    <!-- Ambient Audio -->
+    <audio id="ambient-audio" loop>
+        <source src="https://cdn.pixabay.com/audio/2022/10/18/audio_1618779998.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // === GAME CONFIGURATION ===
+        const CONFIG = {
+            STARTING_SCORE: 5000,
+            MAX_SCORE_PER_ROUND: 2500,
+            SKIP_PENALTY: 500,
+            DIFFICULTY_SETTINGS: {
+                easy: { time: 45, multiplier: 0.8 },
+                medium: { time: 30, multiplier: 1.0 },
+                hard: { time: 15, multiplier: 1.5 }
+            }
+        };
+
+        // === GAME STATE ===
+        let gameState = {
+            totalScore: CONFIG.STARTING_SCORE,
+            currentLocation: null,
+            gameMode: 'countries',
+            difficulty: 'medium',
+            round: 1,
+            streak: 0,
+            isAudioEnabled: true,
+            isDarkTheme: true,
+            timerInterval: null,
+            timeLeft: 30
+        };
+
+        // === DATA STORAGE ===
+        let gameData = {
+            countries: [],
+            usStates: [
+                {name: "Alabama", coords: [32.806671, -86.79113]},
+                {name: "Alaska", coords: [61.370716, -152.404419]},
+                {name: "Arizona", coords: [33.729759, -111.431221]},
+                {name: "Arkansas", coords: [34.969704, -92.373123]},
+                {name: "California", coords: [36.116203, -119.681564]},
+                {name: "Colorado", coords: [39.059811, -105.311104]},
+                {name: "Connecticut", coords: [41.597782, -72.755371]},
+                {name: "Delaware", coords: [39.318523, -75.507141]},
+                {name: "Florida", coords: [27.766279, -81.686783]},
+                {name: "Georgia", coords: [33.040619, -83.643074]},
+                {name: "Hawaii", coords: [21.094318, -157.498337]},
+                {name: "Idaho", coords: [44.240459, -114.478828]},
+                {name: "Illinois", coords: [40.349457, -88.986137]},
+                {name: "Indiana", coords: [39.849426, -86.258278]},
+                {name: "Iowa", coords: [42.011539, -93.210526]},
+                {name: "Kansas", coords: [38.5266, -96.726486]},
+                {name: "Kentucky", coords: [37.66814, -84.670067]},
+                {name: "Louisiana", coords: [31.169546, -91.867805]},
+                {name: "Maine", coords: [44.693947, -69.381927]},
+                {name: "Maryland", coords: [39.063946, -76.802101]},
+                {name: "Massachusetts", coords: [42.230171, -71.530106]},
+                {name: "Michigan", coords: [43.326618, -84.536095]},
+                {name: "Minnesota", coords: [45.694454, -93.900192]},
+                {name: "Mississippi", coords: [32.741646, -89.678696]},
+                {name: "Missouri", coords: [38.456085, -92.288368]},
+                {name: "Montana", coords: [46.921925, -110.454353]},
+                {name: "Nebraska", coords: [41.12537, -98.268082]},
+                {name: "Nevada", coords: [38.313515, -117.055374]},
+                {name: "New Hampshire", coords: [43.452492, -71.563896]},
+                {name: "New Jersey", coords: [40.298904, -74.521011]},
+                {name: "New Mexico", coords: [34.840515, -106.248482]},
+                {name: "New York", coords: [42.165726, -74.948051]},
+                {name: "North Carolina", coords: [35.630066, -79.806419]},
+                {name: "North Dakota", coords: [47.528912, -99.784012]},
+                {name: "Ohio", coords: [40.388783, -82.764915]},
+                {name: "Oklahoma", coords: [35.565342, -96.928917]},
+                {name: "Oregon", coords: [44.572021, -122.070938]},
+                {name: "Pennsylvania", coords: [40.590752, -77.209755]},
+                {name: "Rhode Island", coords: [41.680893, -71.51178]},
+                {name: "South Carolina", coords: [33.856892, -80.945007]},
+                {name: "South Dakota", coords: [44.299782, -99.438828]},
+                {name: "Tennessee", coords: [35.747845, -86.692345]},
+                {name: "Texas", coords: [31.054487, -97.563461]},
+                {name: "Utah", coords: [40.150032, -111.862434]},
+                {name: "Vermont", coords: [44.045876, -72.710686]},
+                {name: "Virginia", coords: [37.769337, -78.169968]},
+                {name: "Washington", coords: [47.400902, -121.490494]},
+                {name: "West Virginia", coords: [38.491226, -80.954453]},
+                {name: "Wisconsin", coords: [44.268543, -89.616508]},
+                {name: "Wyoming", coords: [42.755966, -107.30249]}
+            ],
+            worldCities: [
+                {name: "Tokyo", coords: [35.6762, 139.6503]},
+                {name: "New York", coords: [40.7128, -74.0060]},
+                {name: "London", coords: [51.5074, -0.1278]},
+                {name: "Paris", coords: [48.8566, 2.3522]},
+                {name: "Sydney", coords: [-33.8688, 151.2093]},
+                {name: "Moscow", coords: [55.7558, 37.6176]},
+                {name: "Beijing", coords: [39.9042, 116.4074]},
+                {name: "Mumbai", coords: [19.0760, 72.8777]},
+                {name: "São Paulo", coords: [-23.5505, -46.6333]},
+                {name: "Cairo", coords: [30.0444, 31.2357]},
+                {name: "Buenos Aires", coords: [-34.6118, -58.3960]},
+                {name: "Lagos", coords: [6.5244, 3.3792]},
+                {name: "Bangkok", coords: [13.7563, 100.5018]},
+                {name: "Istanbul", coords: [41.0082, 28.9784]},
+                {name: "Mexico City", coords: [19.4326, -99.1332]},
+                {name: "Los Angeles", coords: [34.0522, -118.2437]},
+                {name: "Berlin", coords: [52.5200, 13.4050]},
+                {name: "Madrid", coords: [40.4168, -3.7038]},
+                {name: "Rome", coords: [41.9028, 12.4964]},
+                {name: "Toronto", coords: [43.6532, -79.3832]}
+            ],
+            europeanCountries: [],
+            asianCountries: []
+        };
+
+        // === LEAFLET SETUP ===
+        let leafletMap;
+        let guessMarker, answerMarker, resultLine;
+        let darkTileLayer, lightTileLayer;
+
+        // === UI ELEMENTS ===
+        const elements = {
+            loadingScreen: document.getElementById('loading-screen'),
+            loadingStatus: document.getElementById('loading-status'),
+            gameOverScreen: document.getElementById('game-over-screen'),
+            resultOverlay: document.getElementById('result-overlay'),
+            mapContainer: document.getElementById('map-container'),
+            ambientAudio: document.getElementById('ambient-audio'),
+            
+            // Controls
+            themeToggle: document.getElementById('theme-toggle'),
+            gameModeSelect: document.getElementById('game-mode'),
+            difficultySelect: document.getElementById('difficulty'),
+            audioToggle: document.getElementById('audio-toggle'),
+            
+            // Display
+            targetName: document.getElementById('target-name'),
+            currentScore: document.getElementById('current-score'),
+            highScore: document.getElementById('high-score'),
+            roundCounter: document.getElementById('round-counter'),
+            streakCounter: document.getElementById('streak-counter'),
+            timerDisplay: document.getElementById('timer-display'),
+            
+            // Results
+            resultDistance: document.getElementById('result-distance'),
+            resultScoreText: document.getElementById('result-score-text'),
+            resultAccuracy: document.getElementById('result-accuracy'),
+            nextRoundBtn: document.getElementById('next-round-btn'),
+            skipRoundBtn: document.getElementById('skip-round-btn'),
+            
+            // Game over
+            finalScore: document.getElementById('final-score'),
+            highScoreMessage: document.getElementById('high-score-message'),
+            restartBtn: document.getElementById('restart-btn'),
+            modeChangeBtn: document.getElementById('mode-change-btn')
+        };
+
+        // === LEAFLET INITIALIZATION ===
+        function initLeaflet() {
+            leafletMap = L.map('map-container', { zoomControl: false }).setView([20, 0], 2);
+            
+            // Create tile layers
+            darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                attribution: '© CartoDB'
+            });
+            
+            lightTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+                attribution: '© CartoDB'
+            });
+            
+            // Add initial layer based on theme (no duplicate layers)
+            if (gameState.isDarkTheme) {
+                leafletMap.addLayer(darkTileLayer);
+            } else {
+                leafletMap.addLayer(lightTileLayer);
+            }
+            
+            leafletMap.on('click', (e) => {
+                if (!gameState.currentLocation) return;
+                handleGuess(e.latlng);
+            });
+        }
+
+        // === DATA LOADING ===
+        async function loadGameData() {
+            try {
+                elements.loadingStatus.textContent = 'Loading countries...';
+                
+                const response = await fetch('https://raw.githubusercontent.com/mledoze/countries/master/countries.json');
+                const data = await response.json();
+                
+                gameData.countries = data
+                    .filter(c => c.name.common && c.latlng && c.latlng.length === 2 && c.independent)
+                    .map(c => ({
+                        name: c.name.common,
+                        coords: c.latlng
+                    }));
+
+                gameData.europeanCountries = gameData.countries.filter((c, index) => {
+                    const europeanCountries = ['Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria', 'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Ukraine', 'United Kingdom', 'Vatican City'];
+                    return europeanCountries.includes(c.name);
+                });
+                
+                gameData.asianCountries = gameData.countries.filter((c, index) => {
+                    const asianCountries = ['Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'China', 'Georgia', 'India', 'Indonesia', 'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia', 'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'North Korea', 'Oman', 'Pakistan', 'Palestine', 'Philippines', 'Qatar', 'Russia', 'Saudi Arabia', 'Singapore', 'South Korea', 'Sri Lanka', 'Syria', 'Taiwan', 'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan', 'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'];
+                    return asianCountries.includes(c.name);
+                });
+
+                elements.loadingStatus.textContent = 'Ready to explore!';
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                elements.loadingStatus.textContent = 'Using offline data...';
+                
+                // Fallback to basic country data
+                gameData.countries = [
+                    {name: "United States", coords: [39.8283, -98.5795]},
+                    {name: "China", coords: [35.8617, 104.1954]},
+                    {name: "Russia", coords: [61.5240, 105.3188]},
+                    {name: "Brazil", coords: [-14.2350, -51.9253]},
+                    {name: "Australia", coords: [-25.2744, 133.7751]},
+                    {name: "Canada", coords: [56.1304, -106.3468]},
+                    {name: "India", coords: [20.5937, 78.9629]},
+                    {name: "Argentina", coords: [-38.4161, -63.6167]},
+                    {name: "Mexico", coords: [23.6345, -102.5528]},
+                    {name: "South Africa", coords: [-30.5595, 22.9375]}
+                ];
+            }
+        }
+
+        // === GAME LOGIC ===
+        function getCurrentLocations() {
+            const modeMap = {
+                'countries': gameData.countries,
+                'us-states': gameData.usStates,
+                'world-cities': gameData.worldCities,
+                'european-countries': gameData.europeanCountries,
+                'asian-countries': gameData.asianCountries
+            };
+            return modeMap[gameState.gameMode] || gameData.countries;
+        }
+
+        function selectRandomLocation() {
+            const locations = getCurrentLocations();
+            if (locations.length === 0) return null;
+            
+            let newLocation;
+            do {
+                newLocation = locations[Math.floor(Math.random() * locations.length)];
+            } while (newLocation === gameState.currentLocation && locations.length > 1);
+            
+            return newLocation;
+        }
+
+        function startRound() {
+            // Clean up previous round
+            cleanupMarkers();
+            
+            gameState.currentLocation = selectRandomLocation();
+            if (!gameState.currentLocation) {
+                alert('No locations available for this mode!');
+                return;
+            }
+
+            elements.targetName.textContent = gameState.currentLocation.name;
+            elements.resultOverlay.style.display = 'none';
+            
+            // Set appropriate zoom level and center based on game mode
+            if (gameState.gameMode === 'us-states') {
+                // Center on USA with closer zoom
+                leafletMap.setView([39.8283, -98.5795], 4);
+            } else if (gameState.gameMode === 'european-countries') {
+                // Center on Europe
+                leafletMap.setView([54.5260, 15.2551], 4);
+            } else if (gameState.gameMode === 'asian-countries') {
+                // Center on Asia
+                leafletMap.setView([34.0479, 100.6197], 3);
+            } else {
+                // Default world view
+                leafletMap.setView([20, 0], 2);
+            }
+            
+            startTimer();
+            updateUI();
+        }
+
+        function startTimer() {
+            clearInterval(gameState.timerInterval);
+            gameState.timeLeft = CONFIG.DIFFICULTY_SETTINGS[gameState.difficulty].time;
+            elements.timerDisplay.textContent = gameState.timeLeft;
+            elements.timerDisplay.classList.remove('warning');
+            
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                elements.timerDisplay.textContent = gameState.timeLeft;
+                
+                if (gameState.timeLeft <= 10) {
+                    elements.timerDisplay.classList.add('warning');
+                }
+                
+                if (gameState.timeLeft <= 0) {
+                    handleTimeout();
+                }
+            }, 1000);
+        }
+
+        function handleGuess(coords) {
+            clearInterval(gameState.timerInterval);
+            
+            const distance = calculateDistance(
+                coords.lat, coords.lng,
+                gameState.currentLocation.coords[0], gameState.currentLocation.coords[1]
+            );
+            
+            processGuess(coords, distance);
+        }
+
+        function handleTimeout() {
+            clearInterval(gameState.timerInterval);
+            const distance = 20000; // Maximum penalty
+            const coords = { lat: 0, lng: 0 };
+            processGuess(coords, distance, true);
+        }
+
+        function processGuess(guessCoords, distance, isTimeout = false) {
+            const maxDistance = 20000;
+            const accuracy = Math.max(0, (maxDistance - distance) / maxDistance * 100);
+            const baseScore = Math.round((maxDistance - distance) / maxDistance * CONFIG.MAX_SCORE_PER_ROUND);
+            const difficultyMultiplier = CONFIG.DIFFICULTY_SETTINGS[gameState.difficulty].multiplier;
+            const roundScore = Math.round(baseScore * difficultyMultiplier);
+            
+            gameState.totalScore += roundScore;
+            
+            // Update streak
+            if (accuracy > 50) {
+                gameState.streak++;
+            } else {
+                gameState.streak = 0;
+            }
+            
+            // Show floating score
+            showFloatingScore(roundScore);
+            
+            // Play sound feedback
+            if (gameState.isAudioEnabled) {
+                if (accuracy > 75) {
+                    playBeep(880, 0.2); // High success
+                } else if (accuracy > 25) {
+                    playBeep(440, 0.3); // Medium
+                } else {
+                    playBeep(220, 0.4); // Low/fail
+                }
+            }
+            
+            // Check game over
+            if (gameState.totalScore <= 0) {
+                gameState.totalScore = 0;
+                showGameOver();
+                return;
+            }
+            
+            showRoundResult(guessCoords, distance, roundScore, accuracy, isTimeout);
+        }
+
+        function showFloatingScore(score) {
+            const scoreElement = document.createElement('div');
+            scoreElement.className = `score-change ${score >= 0 ? 'score-positive' : 'score-negative'}`;
+            scoreElement.textContent = `${score >= 0 ? '+' : ''}${score}`;
+            document.body.appendChild(scoreElement);
+            
+            setTimeout(() => {
+                if (scoreElement.parentNode) {
+                    scoreElement.parentNode.removeChild(scoreElement);
+                }
+            }, 2000);
+        }
+
+        function showRoundResult(guessCoords, distance, score, accuracy, isTimeout) {
+            const answerCoords = gameState.currentLocation.coords;
+            
+            // Add markers to map
+            if (!isTimeout) {
+                guessMarker = L.marker([guessCoords.lat, guessCoords.lng]).addTo(leafletMap);
+            }
+            
+            answerMarker = L.marker(answerCoords, {
+                icon: L.icon({
+                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-green.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41]
+                })
+            }).addTo(leafletMap);
+            
+            if (!isTimeout) {
+                const color = accuracy > 75 ? '#39ff14' : accuracy > 50 ? '#00f5ff' : '#ff073a';
+                resultLine = L.polyline([[guessCoords.lat, guessCoords.lng], answerCoords], {
+                    color: color,
+                    weight: 3,
+                    opacity: 0.8
+                }).addTo(leafletMap);
+                
+                leafletMap.fitBounds(resultLine.getBounds().pad(0.2));
+            } else {
+                leafletMap.setView(answerCoords, 6);
+            }
+            
+            // Update result overlay
+            elements.resultDistance.textContent = isTimeout ? 'Time\'s Up!' : `${Math.round(distance)} km away`;
+            elements.resultScoreText.textContent = `Score: ${score >= 0 ? '+' : ''}${score}`;
+            elements.resultScoreText.style.color = score >= 0 ? (gameState.isDarkTheme ? 'var(--dark-success)' : 'var(--light-success)') : (gameState.isDarkTheme ? 'var(--dark-danger)' : 'var(--light-danger)');
+            elements.resultAccuracy.textContent = `Accuracy: ${accuracy.toFixed(1)}%`;
+            
+            elements.resultOverlay.style.display = 'block';
+            updateUI();
+        }
+
+        function cleanupMarkers() {
+            if (guessMarker) {
+                leafletMap.removeLayer(guessMarker);
+                guessMarker = null;
+            }
+            if (answerMarker) {
+                leafletMap.removeLayer(answerMarker);
+                answerMarker = null;
+            }
+            if (resultLine) {
+                leafletMap.removeLayer(resultLine);
+                resultLine = null;
+            }
+        }
+
+        function nextRound() {
+            gameState.round++;
+            startRound();
+        }
+
+        function skipRound() {
+            gameState.totalScore -= CONFIG.SKIP_PENALTY;
+            gameState.streak = 0;
+            showFloatingScore(-CONFIG.SKIP_PENALTY);
+            
+            if (gameState.totalScore <= 0) {
+                gameState.totalScore = 0;
+                showGameOver();
+                return;
+            }
+            
+            nextRound();
+        }
+
+        function showGameOver() {
+            clearInterval(gameState.timerInterval);
+            
+            const highScoreKey = `highScore_${gameState.gameMode}_${gameState.difficulty}`;
+            const currentHighScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
+            const isNewHighScore = gameState.totalScore > currentHighScore;
+            
+            if (isNewHighScore) {
+                localStorage.setItem(highScoreKey, gameState.totalScore);
+                elements.highScoreMessage.style.display = 'block';
+            } else {
+                elements.highScoreMessage.style.display = 'none';
+            }
+            
+            elements.finalScore.textContent = gameState.totalScore;
+            elements.gameOverScreen.style.display = 'block';
+        }
+
+        function resetGame() {
+            gameState.totalScore = CONFIG.STARTING_SCORE;
+            gameState.round = 1;
+            gameState.streak = 0;
+            
+            elements.gameOverScreen.style.display = 'none';
+            cleanupMarkers();
+            updateUI();
+            startRound();
+        }
+
+        function updateUI() {
+            elements.currentScore.textContent = gameState.totalScore;
+            elements.roundCounter.textContent = gameState.round;
+            elements.streakCounter.textContent = gameState.streak;
+            
+            const highScoreKey = `highScore_${gameState.gameMode}_${gameState.difficulty}`;
+            const highScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
+            elements.highScore.textContent = highScore;
+        }
+
+        function toggleTheme() {
+            gameState.isDarkTheme = !gameState.isDarkTheme;
+            
+            if (gameState.isDarkTheme) {
+                document.body.className = 'dark-theme';
+                elements.themeToggle.textContent = '☀️ Day Mode';
+                
+                // Switch to dark map tiles
+                if (leafletMap.hasLayer(lightTileLayer)) {
+                    leafletMap.removeLayer(lightTileLayer);
+                }
+                if (!leafletMap.hasLayer(darkTileLayer)) {
+                    leafletMap.addLayer(darkTileLayer);
+                }
+            } else {
+                document.body.className = 'light-theme';
+                elements.themeToggle.textContent = '🌙 Night Mode';
+                
+                // Switch to light map tiles
+                if (leafletMap.hasLayer(darkTileLayer)) {
+                    leafletMap.removeLayer(darkTileLayer);
+                }
+                if (!leafletMap.hasLayer(lightTileLayer)) {
+                    leafletMap.addLayer(lightTileLayer);
+                }
+            }
+            
+            localStorage.setItem('theme', gameState.isDarkTheme ? 'dark' : 'light');
+        }
+
+        function toggleAudio() {
+            gameState.isAudioEnabled = !gameState.isAudioEnabled;
+            elements.audioToggle.textContent = gameState.isAudioEnabled ? '🔊 Audio' : '🔇 Muted';
+            
+            if (gameState.isAudioEnabled) {
+                elements.ambientAudio.play().catch(e => console.warn('Audio play failed:', e));
+            } else {
+                elements.ambientAudio.pause();
+            }
+            
+            localStorage.setItem('audioEnabled', gameState.isAudioEnabled);
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // === AUDIO SYSTEM ===
+        let audioContext;
+
+        function initAudio() {
+            if (!gameState.isAudioEnabled) return;
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                elements.ambientAudio.volume = 0.3;
+                elements.ambientAudio.play().catch(e => console.warn('Audio play failed:', e));
+            } catch (error) {
+                console.warn('Audio not supported:', error);
+            }
+        }
+
+        function playBeep(frequency, duration) {
+            if (!gameState.isAudioEnabled || !audioContext) return;
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            osc.type = 'sine';
+            
+            gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+
+        // === EVENT LISTENERS ===
+        elements.themeToggle.addEventListener('click', toggleTheme);
+        
+        elements.gameModeSelect.addEventListener('change', (e) => {
+            gameState.gameMode = e.target.value;
+            resetGame();
+        });
+
+        elements.difficultySelect.addEventListener('change', (e) => {
+            gameState.difficulty = e.target.value;
+            updateUI();
+        });
+
+        elements.audioToggle.addEventListener('click', toggleAudio);
+        elements.nextRoundBtn.addEventListener('click', nextRound);
+        elements.skipRoundBtn.addEventListener('click', skipRound);
+        elements.restartBtn.addEventListener('click', resetGame);
+        elements.modeChangeBtn.addEventListener('click', () => {
+            elements.gameOverScreen.style.display = 'none';
+        });
+
+        // === INITIALIZATION ===
+        async function initGame() {
+            try {
+                // Load saved preferences
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme) {
+                    gameState.isDarkTheme = savedTheme === 'dark';
+                    document.body.className = gameState.isDarkTheme ? 'dark-theme' : 'light-theme';
+                    elements.themeToggle.textContent = gameState.isDarkTheme ? '☀️ Day Mode' : '🌙 Night Mode';
+                }
+                
+                const savedAudio = localStorage.getItem('audioEnabled');
+                if (savedAudio !== null) {
+                    gameState.isAudioEnabled = savedAudio === 'true';
+                    elements.audioToggle.textContent = gameState.isAudioEnabled ? '🔊 Audio' : '🔇 Muted';
+                }
+                
+                elements.loadingStatus.textContent = 'Setting up map...';
+                initLeaflet();
+                
+                await loadGameData();
+                
+                elements.loadingScreen.style.display = 'none';
+                elements.mapContainer.classList.add('loaded');
+                
+                // Initialize audio on first user interaction
+                document.addEventListener('click', () => {
+                    if (!audioContext) initAudio();
+                }, { once: true });
+                
+                resetGame();
+                
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                elements.loadingStatus.textContent = 'Failed to load. Please refresh the page.';
+            }
+        }
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
