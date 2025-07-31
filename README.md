@@ -58,7 +58,7 @@ https://anttiluode.github.io/GlobalLocator/
 
 Option 3: Local Development
 bash# Clone the repository
-git clone https://github.com/yourusername/global-locator-game.git
+git clone https://github.com/anttiluode/GlobaLocator.git
 
 # Navigate to the directory
 cd global-locator-game
@@ -157,33 +157,6 @@ Country Data Not Loading
 The game includes fallback data for offline use
 Check browser console for any network errors
 Verify the REST Countries API is accessible
-
-🤝 Contributing
-We welcome contributions! Here are some ways you can help:
-🐛 Bug Reports
-
-Use GitHub Issues to report bugs
-Include browser version and steps to reproduce
-Screenshots are helpful for UI issues
-
-✨ Feature Requests
-
-Suggest new game modes or features
-Propose UI/UX improvements
-Share ideas for scoring mechanics
-
-🔧 Code Contributions
-
-Fork the repository
-Make your changes
-Submit a pull request with clear description
-Follow existing code style
-
-📝 Documentation
-
-Improve this README
-Add code comments
-Create tutorials or guides
 
 📄 License
 This project is open source and available under the MIT License.
