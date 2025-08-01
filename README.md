@@ -1,5 +1,7 @@
 🌍 Global Locator: Day & Night Edition
 
+(EDIT: 01 08 25: Some more features) 
+
 Now live at: 
 
 https://anttiluode.github.io/GlobalLocator/
