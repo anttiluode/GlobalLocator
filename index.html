@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Locator: Day & Night Edition</title>
+    <title>GeoChallenge: Ultimate Edition</title>
     
     <!-- Leaflet for mapping -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,6 +24,8 @@
             --dark-success: #39ff14;
             --dark-danger: #ff073a;
             --dark-warning: #ffc107;
+            --dark-gold: #ffd700;
+            --dark-purple: #bf00ff;
             
             /* Light theme */
             --light-bg: #f0f2f5;
@@ -36,6 +38,8 @@
             --light-success: #27ae60;
             --light-danger: #e74c3c;
             --light-warning: #f39c12;
+            --light-gold: #f1c40f;
+            --light-purple: #8e44ad;
         }
 
         * {
@@ -49,6 +53,7 @@
             overflow: hidden;
             height: 100vh;
             transition: all 0.5s ease;
+            cursor: crosshair;
         }
 
         /* Dark theme styles */
@@ -142,10 +147,16 @@
             height: 100%;
             opacity: 0;
             transition: opacity 0.5s ease;
+            cursor: crosshair;
         }
 
         #map-container.loaded {
             opacity: 1;
+        }
+
+        /* Custom crosshair cursor */
+        .leaflet-container {
+            cursor: crosshair !important;
         }
 
         /* HUD Elements */
@@ -233,6 +244,87 @@
             50% { transform: scale(1.1); }
         }
 
+        /* Achievements Panel */
+        #achievements-panel {
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .achievement {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .achievement.unlocked {
+            animation: achievementUnlock 0.8s ease-out;
+        }
+
+        .dark-theme .achievement.unlocked {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid var(--dark-gold);
+        }
+
+        .light-theme .achievement.unlocked {
+            background: rgba(241, 196, 15, 0.2);
+            border: 1px solid var(--light-gold);
+        }
+
+        .dark-theme .achievement.locked {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.6;
+        }
+
+        .light-theme .achievement.locked {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            opacity: 0.6;
+        }
+
+        @keyframes achievementUnlock {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Multiplier Display */
+        #multiplier-display {
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            text-align: center;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .dark-theme #multiplier-display {
+            color: var(--dark-purple);
+        }
+
+        .light-theme #multiplier-display {
+            color: var(--light-purple);
+        }
+
+        #multiplier-display.active {
+            animation: multiplierPulse 0.5s ease-out;
+        }
+
+        @keyframes multiplierPulse {
+            0% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.3); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+
         /* Controls */
         .control-btn, .control-select {
             border-radius: 8px;
@@ -271,6 +363,23 @@
             background: rgba(255, 255, 255, 0.8);
             border-color: var(--light-accent);
             box-shadow: 0 0 15px var(--light-accent);
+        }
+
+        /* Lives System */
+        #lives-display {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            font-size: 1.5em;
+        }
+
+        .life-heart {
+            transition: all 0.3s ease;
+        }
+
+        .life-heart.lost {
+            opacity: 0.3;
+            transform: scale(0.8);
         }
 
         /* Overlays */
@@ -384,12 +493,61 @@
             color: var(--light-warning);
         }
 
+        /* Achievement Toast */
+        .achievement-toast {
+            position: fixed;
+            top: 50px;
+            right: -400px;
+            z-index: 3000;
+            padding: 20px 25px;
+            border-radius: 12px;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            animation: slideInOut 4s ease-in-out;
+            min-width: 350px;
+        }
+
+        .dark-theme .achievement-toast {
+            background: linear-gradient(45deg, var(--dark-gold), var(--dark-purple));
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .light-theme .achievement-toast {
+            background: linear-gradient(45deg, var(--light-gold), var(--light-purple));
+            color: white;
+            box-shadow: 0 10px 30px rgba(241, 196, 15, 0.3);
+        }
+
+        @keyframes slideInOut {
+            0%, 100% { right: -400px; }
+            15%, 85% { right: 20px; }
+        }
+
+        /* Share Button */
+        .share-btn {
+            background: linear-gradient(45deg, #1da1f2, #1991db);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(29, 161, 242, 0.4);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             #target-name { font-size: 1.8em; }
             #timer-display { font-size: 2em; }
             .overlay { min-width: 90vw; padding: 20px; }
             #mode-controls { flex-direction: column; align-items: flex-start; }
+            #achievements-panel { display: none; }
         }
     </style>
 </head>
@@ -414,6 +572,7 @@
                 <option value="easy">Easy (45s)</option>
                 <option value="medium" selected>Medium (30s)</option>
                 <option value="hard">Hard (15s)</option>
+                <option value="extreme">EXTREME (8s)</option>
             </select>
             <button id="audio-toggle" class="control-btn">🔊 Audio</button>
         </div>
@@ -423,10 +582,23 @@
         </div>
 
         <div id="game-stats" class="hud glass">
-            <div>Score: <span id="current-score" class="neon-text highlight-score">5000</span></div>
+            <div>Score: <span id="current-score" class="neon-text highlight-score">10000</span></div>
             <div>High Score: <span id="high-score" class="highlight-score">0</span></div>
             <div>Round: <span id="round-counter">1</span></div>
             <div>Streak: <span id="streak-counter">0</span></div>
+            <div id="lives-display">
+                Lives: <span id="lives-hearts">❤️❤️❤️</span>
+            </div>
+        </div>
+
+        <div id="multiplier-display" class="hud glass">
+            <div>Multiplier</div>
+            <div id="multiplier-value" class="neon-text">1x</div>
+        </div>
+
+        <div id="achievements-panel" class="hud glass">
+            <h3 style="margin-bottom: 10px; font-family: 'Orbitron', monospace;">Achievements</h3>
+            <div id="achievements-list"></div>
         </div>
 
         <div id="timer-display" class="hud glass neon-text">30</div>
@@ -440,11 +612,13 @@
     </div>
 
     <div id="game-over-screen" class="overlay glass" style="display: none;">
-        <h1 class="neon-text">Mission Complete!</h1>
+        <h1 class="neon-text">Game Over!</h1>
         <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <span id="final-score" class="neon-text highlight-score">0</span></p>
         <p id="high-score-message" class="highlight-score" style="font-weight: bold; display: none;">🚀 NEW HIGH SCORE! 🚀</p>
-        <button id="restart-btn">Launch New Mission</button>
-        <button id="mode-change-btn">Change Parameters</button>
+        <div id="final-achievements" style="margin: 20px 0;"></div>
+        <button id="restart-btn">Play Again</button>
+        <button id="mode-change-btn">Change Mode</button>
+        <button id="share-score-btn" class="share-btn">Share Score</button>
     </div>
 
     <div id="result-overlay" class="overlay glass" style="display: none;">
@@ -452,7 +626,7 @@
         <p id="result-score-text" style="font-size: 1.3em; margin: 15px 0;">Score: +0</p>
         <p id="result-accuracy">Accuracy: 0%</p>
         <button id="next-round-btn">Next Target</button>
-        <button id="skip-round-btn">Skip (-500)</button>
+        <button id="skip-round-btn">Skip (-2000)</button>
     </div>
 
     <!-- Ambient Audio -->
@@ -463,15 +637,32 @@
     <script>
         // === GAME CONFIGURATION ===
         const CONFIG = {
-            STARTING_SCORE: 5000,
-            MAX_SCORE_PER_ROUND: 2500,
-            SKIP_PENALTY: 500,
+            STARTING_SCORE: 10000,
+            MAX_SCORE_PER_ROUND: 5000,
+            SKIP_PENALTY: 2000,
+            WRONG_PENALTY: 3000,
+            STARTING_LIVES: 3,
             DIFFICULTY_SETTINGS: {
-                easy: { time: 45, multiplier: 0.8 },
-                medium: { time: 30, multiplier: 1.0 },
-                hard: { time: 15, multiplier: 1.5 }
+                easy: { time: 45, multiplier: 0.8, wrongPenalty: 2000 },
+                medium: { time: 30, multiplier: 1.0, wrongPenalty: 3000 },
+                hard: { time: 15, multiplier: 1.5, wrongPenalty: 4000 },
+                extreme: { time: 8, multiplier: 2.0, wrongPenalty: 5000 }
             }
         };
+
+        // === ACHIEVEMENTS SYSTEM ===
+        const ACHIEVEMENTS = [
+            { id: 'first_correct', name: 'First Blood', desc: 'Get your first correct guess', icon: '🎯', unlocked: false, points: 500 },
+            { id: 'streak_5', name: 'Hot Streak', desc: 'Get 5 correct in a row', icon: '🔥', unlocked: false, points: 1000 },
+            { id: 'streak_10', name: 'Unstoppable', desc: 'Get 10 correct in a row', icon: '⚡', unlocked: false, points: 2500 },
+            { id: 'perfect_5', name: 'Sharpshooter', desc: 'Get 5 perfect scores (100% accuracy)', icon: '🏹', unlocked: false, points: 2000 },
+            { id: 'speed_demon', name: 'Speed Demon', desc: 'Answer correctly in under 3 seconds', icon: '💨', unlocked: false, points: 1500 },
+            { id: 'survivor', name: 'Survivor', desc: 'Reach round 20', icon: '🏆', unlocked: false, points: 3000 },
+            { id: 'high_roller', name: 'High Roller', desc: 'Reach 50,000 points', icon: '💎', unlocked: false, points: 5000 },
+            { id: 'globe_trotter', name: 'Globe Trotter', desc: 'Play all game modes', icon: '🌍', unlocked: false, points: 2000 },
+            { id: 'accuracy_master', name: 'Precision Master', desc: 'Maintain 90% accuracy for 10 rounds', icon: '🎪', unlocked: false, points: 4000 },
+            { id: 'comeback_king', name: 'Comeback King', desc: 'Score 1000+ points with 1 life left', icon: '👑', unlocked: false, points: 3500 }
+        ];
 
         // === GAME STATE ===
         let gameState = {
@@ -481,10 +672,19 @@
             difficulty: 'medium',
             round: 1,
             streak: 0,
+            lives: CONFIG.STARTING_LIVES,
+            multiplier: 1,
+            perfectStreak: 0,
+            totalCorrect: 0,
+            totalGuesses: 0,
+            accuracyHistory: [],
+            playedModes: ['countries'],
             isAudioEnabled: true,
             isDarkTheme: true,
             timerInterval: null,
-            timeLeft: 30
+            timeLeft: 30,
+            roundStartTime: null,
+            achievements: [...ACHIEVEMENTS]
         };
 
         // === DATA STORAGE ===
@@ -594,7 +794,11 @@
             highScore: document.getElementById('high-score'),
             roundCounter: document.getElementById('round-counter'),
             streakCounter: document.getElementById('streak-counter'),
+            livesHearts: document.getElementById('lives-hearts'),
+            multiplierValue: document.getElementById('multiplier-value'),
+            multiplierDisplay: document.getElementById('multiplier-display'),
             timerDisplay: document.getElementById('timer-display'),
+            achievementsList: document.getElementById('achievements-list'),
             
             // Results
             resultDistance: document.getElementById('result-distance'),
@@ -606,15 +810,22 @@
             // Game over
             finalScore: document.getElementById('final-score'),
             highScoreMessage: document.getElementById('high-score-message'),
+            finalAchievements: document.getElementById('final-achievements'),
             restartBtn: document.getElementById('restart-btn'),
-            modeChangeBtn: document.getElementById('mode-change-btn')
+            modeChangeBtn: document.getElementById('mode-change-btn'),
+            shareScoreBtn: document.getElementById('share-score-btn')
         };
 
         // === LEAFLET INITIALIZATION ===
         function initLeaflet() {
-            leafletMap = L.map('map-container', { zoomControl: false }).setView([20, 0], 2);
+            leafletMap = L.map('map-container', { 
+                zoomControl: true,
+                maxZoom: 18,
+                minZoom: 2
+            }).setView([20, 0], 2);
             
-            // Create tile layers
+            leafletMap.zoomControl.setPosition('bottomleft');
+            
             darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
                 attribution: '© CartoDB'
             });
@@ -623,7 +834,6 @@
                 attribution: '© CartoDB'
             });
             
-            // Add initial layer based on theme (no duplicate layers)
             if (gameState.isDarkTheme) {
                 leafletMap.addLayer(darkTileLayer);
             } else {
@@ -635,13 +845,14 @@
                 handleGuess(e.latlng);
             });
         }
-
+        
         // === DATA LOADING ===
         async function loadGameData() {
             try {
-                elements.loadingStatus.textContent = 'Loading countries...';
+                elements.loadingStatus.textContent = 'Fetching latest country data...';
                 
                 const response = await fetch('https://raw.githubusercontent.com/mledoze/countries/master/countries.json');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 
                 gameData.countries = data
@@ -651,36 +862,148 @@
                         coords: c.latlng
                     }));
 
-                gameData.europeanCountries = gameData.countries.filter((c, index) => {
-                    const europeanCountries = ['Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria', 'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Ukraine', 'United Kingdom', 'Vatican City'];
-                    return europeanCountries.includes(c.name);
-                });
+                // Filter for European countries from the full list
+                const europeanCountryNames = ['Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria', 'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Ukraine', 'United Kingdom', 'Vatican City'];
+                gameData.europeanCountries = gameData.countries.filter(c => europeanCountryNames.includes(c.name));
                 
-                gameData.asianCountries = gameData.countries.filter((c, index) => {
-                    const asianCountries = ['Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'China', 'Georgia', 'India', 'Indonesia', 'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia', 'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'North Korea', 'Oman', 'Pakistan', 'Palestine', 'Philippines', 'Qatar', 'Russia', 'Saudi Arabia', 'Singapore', 'South Korea', 'Sri Lanka', 'Syria', 'Taiwan', 'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan', 'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'];
-                    return asianCountries.includes(c.name);
-                });
+                // Filter for Asian countries from the full list
+                const asianCountryNames = ['Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'China', 'Georgia', 'India', 'Indonesia', 'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia', 'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'North Korea', 'Oman', 'Pakistan', 'Palestine', 'Philippines', 'Qatar', 'Russia', 'Saudi Arabia', 'Singapore', 'South Korea', 'Sri Lanka', 'Syria', 'Taiwan', 'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan', 'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'];
+                gameData.asianCountries = gameData.countries.filter(c => asianCountryNames.includes(c.name));
 
-                elements.loadingStatus.textContent = 'Ready to explore!';
+                elements.loadingStatus.textContent = 'Data loaded!';
                 
             } catch (error) {
-                console.error('Error loading data:', error);
-                elements.loadingStatus.textContent = 'Using offline data...';
+                console.error('Error loading dynamic data:', error);
+                elements.loadingStatus.textContent = 'Using reliable offline data...';
                 
-                // Fallback to basic country data
+                // Fallback to a smaller, hardcoded list if the fetch fails
                 gameData.countries = [
-                    {name: "United States", coords: [39.8283, -98.5795]},
-                    {name: "China", coords: [35.8617, 104.1954]},
-                    {name: "Russia", coords: [61.5240, 105.3188]},
-                    {name: "Brazil", coords: [-14.2350, -51.9253]},
-                    {name: "Australia", coords: [-25.2744, 133.7751]},
-                    {name: "Canada", coords: [56.1304, -106.3468]},
-                    {name: "India", coords: [20.5937, 78.9629]},
-                    {name: "Argentina", coords: [-38.4161, -63.6167]},
-                    {name: "Mexico", coords: [23.6345, -102.5528]},
-                    {name: "South Africa", coords: [-30.5595, 22.9375]}
+                    {name: "United States", coords: [39.8283, -98.5795]}, {name: "China", coords: [35.8617, 104.1954]},
+                    {name: "Russia", coords: [61.5240, 105.3188]}, {name: "Brazil", coords: [-14.2350, -51.9253]},
+                    {name: "Australia", coords: [-25.2744, 133.7751]}, {name: "Canada", coords: [56.1304, -106.3468]},
+                    {name: "India", coords: [20.5937, 78.9629]}, {name: "Argentina", coords: [-38.4161, -63.6167]},
+                    {name: "Mexico", coords: [23.6345, -102.5528]}, {name: "South Africa", coords: [-30.5595, 22.9375]},
+                    {name: "United Kingdom", coords: [55.3781, -3.4360]}, {name: "France", coords: [46.2276, 2.2137]},
+                    {name: "Germany", coords: [51.1657, 10.4515]}, {name: "Japan", coords: [36.2048, 138.2529]},
+                    {name: "Italy", coords: [41.8719, 12.5674]}, {name: "Spain", coords: [40.4637, -3.7492]},
+                    {name: "Turkey", coords: [38.9637, 35.2433]}, {name: "Iran", coords: [32.4279, 53.6880]},
+                    {name: "Egypt", coords: [26.0975, 31.4735]}, {name: "Nigeria", coords: [9.0765, 8.6753]},
+                    {name: "Indonesia", coords: [-0.7893, 113.9213]}, {name: "Thailand", coords: [15.8700, 100.9925]},
+                    {name: "Kazakhstan", coords: [48.0196, 66.9237]}, {name: "Algeria", coords: [28.0339, 1.6596]},
+                    {name: "Norway", coords: [60.4720, 8.4689]}
                 ];
+                gameData.europeanCountries = gameData.countries.filter(c => ['United Kingdom', 'France', 'Germany', 'Italy', 'Spain', 'Norway'].includes(c.name));
+                gameData.asianCountries = gameData.countries.filter(c => ['China', 'India', 'Japan', 'Turkey', 'Iran', 'Indonesia', 'Thailand', 'Kazakhstan'].includes(c.name));
             }
+        }
+
+
+        // === ACHIEVEMENTS SYSTEM ===
+        function checkAchievements() {
+            const unlockedThisRound = [];
+            
+            gameState.achievements.forEach(achievement => {
+                if (achievement.unlocked) return;
+                
+                let shouldUnlock = false;
+                
+                switch (achievement.id) {
+                    case 'first_correct': shouldUnlock = gameState.totalCorrect >= 1; break;
+                    case 'streak_5': shouldUnlock = gameState.streak >= 5; break;
+                    case 'streak_10': shouldUnlock = gameState.streak >= 10; break;
+                    case 'perfect_5': shouldUnlock = gameState.perfectStreak >= 5; break;
+                    case 'speed_demon':
+                        const responseTime = Date.now() - gameState.roundStartTime;
+                        shouldUnlock = responseTime < 3000 && gameState.totalCorrect > 0;
+                        break;
+                    case 'survivor': shouldUnlock = gameState.round >= 20; break;
+                    case 'high_roller': shouldUnlock = gameState.totalScore >= 50000; break;
+                    case 'globe_trotter': shouldUnlock = gameState.playedModes.length >= 5; break;
+                    case 'accuracy_master':
+                        if (gameState.accuracyHistory.length >= 10) {
+                            const recentAccuracy = gameState.accuracyHistory.slice(-10);
+                            const avgAccuracy = recentAccuracy.reduce((a, b) => a + b, 0) / recentAccuracy.length;
+                            shouldUnlock = avgAccuracy >= 90;
+                        }
+                        break;
+                    case 'comeback_king': shouldUnlock = gameState.lives === 1 && gameState.totalScore >= 1000; break;
+                }
+                
+                if (shouldUnlock) {
+                    achievement.unlocked = true;
+                    gameState.totalScore += achievement.points;
+                    unlockedThisRound.push(achievement);
+                    showAchievementToast(achievement);
+                    saveAchievements();
+                }
+            });
+            
+            updateAchievementsDisplay();
+            return unlockedThisRound;
+        }
+
+        function showAchievementToast(achievement) {
+            const toast = document.createElement('div');
+            toast.className = 'achievement-toast';
+            toast.innerHTML = `
+                <div style="font-size: 1.5em; margin-bottom: 5px;">${achievement.icon} ACHIEVEMENT UNLOCKED!</div>
+                <div style="font-size: 1.2em; margin-bottom: 5px;">${achievement.name}</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">${achievement.desc}</div>
+                <div style="font-size: 1.1em; margin-top: 10px; color: #ffd700;">+${achievement.points} points!</div>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 4500);
+            
+            if (gameState.isAudioEnabled) {
+                playBeep(880, 0.3);
+                setTimeout(() => playBeep(1100, 0.3), 100);
+                setTimeout(() => playBeep(1320, 0.4), 200);
+            }
+        }
+
+        function updateAchievementsDisplay() {
+            elements.achievementsList.innerHTML = '';
+            gameState.achievements.forEach(achievement => {
+                const div = document.createElement('div');
+                div.className = `achievement ${achievement.unlocked ? 'unlocked' : 'locked'}`;
+                div.innerHTML = `
+                    <span style="font-size: 1.2em;">${achievement.icon}</span>
+                    <div>
+                        <div style="font-weight: bold;">${achievement.name}</div>
+                        <div style="font-size: 0.8em; opacity: 0.8;">${achievement.desc}</div>
+                    </div>
+                    <span style="margin-left: auto; font-weight: bold;">+${achievement.points}</span>
+                `;
+                elements.achievementsList.appendChild(div);
+            });
+        }
+
+        // === MULTIPLIER & LIVES SYSTEM ===
+        function updateMultiplier() {
+            let newMultiplier = 1;
+            if (gameState.streak >= 10) newMultiplier = 3;
+            else if (gameState.streak >= 5) newMultiplier = 2;
+            else if (gameState.streak >= 3) newMultiplier = 1.5;
+            
+            if (newMultiplier !== gameState.multiplier) {
+                gameState.multiplier = newMultiplier;
+                elements.multiplierValue.textContent = `${newMultiplier}x`;
+                elements.multiplierDisplay.classList.add('active');
+                setTimeout(() => elements.multiplierDisplay.classList.remove('active'), 500);
+            }
+        }
+
+        function updateLivesDisplay() {
+            const hearts = [];
+            for (let i = 0; i < CONFIG.STARTING_LIVES; i++) {
+                hearts.push(`<span class="life-heart ${i < gameState.lives ? '' : 'lost'}">${i < gameState.lives ? '❤️' : '💔'}</span>`);
+            }
+            elements.livesHearts.innerHTML = hearts.join('');
         }
 
         // === GAME LOGIC ===
@@ -708,32 +1031,22 @@
         }
 
         function startRound() {
-            // Clean up previous round
             cleanupMarkers();
             
             gameState.currentLocation = selectRandomLocation();
             if (!gameState.currentLocation) {
-                alert('No locations available for this mode!');
+                alert('No locations available for this mode! Try the "World Countries" mode.');
                 return;
             }
 
+            gameState.roundStartTime = Date.now();
             elements.targetName.textContent = gameState.currentLocation.name;
             elements.resultOverlay.style.display = 'none';
             
-            // Set appropriate zoom level and center based on game mode
-            if (gameState.gameMode === 'us-states') {
-                // Center on USA with closer zoom
-                leafletMap.setView([39.8283, -98.5795], 4);
-            } else if (gameState.gameMode === 'european-countries') {
-                // Center on Europe
-                leafletMap.setView([54.5260, 15.2551], 4);
-            } else if (gameState.gameMode === 'asian-countries') {
-                // Center on Asia
-                leafletMap.setView([34.0479, 100.6197], 3);
-            } else {
-                // Default world view
-                leafletMap.setView([20, 0], 2);
-            }
+            if (gameState.gameMode === 'us-states') leafletMap.setView([39.8283, -98.5795], 4);
+            else if (gameState.gameMode === 'european-countries') leafletMap.setView([54.5260, 15.2551], 4);
+            else if (gameState.gameMode === 'asian-countries') leafletMap.setView([34.0479, 100.6197], 3);
+            else leafletMap.setView([20, 0], 2);
             
             startTimer();
             updateUI();
@@ -749,32 +1062,20 @@
                 gameState.timeLeft--;
                 elements.timerDisplay.textContent = gameState.timeLeft;
                 
-                if (gameState.timeLeft <= 10) {
-                    elements.timerDisplay.classList.add('warning');
-                }
-                
-                if (gameState.timeLeft <= 0) {
-                    handleTimeout();
-                }
+                if (gameState.timeLeft <= 10) elements.timerDisplay.classList.add('warning');
+                if (gameState.timeLeft <= 0) handleTimeout();
             }, 1000);
         }
 
         function handleGuess(coords) {
             clearInterval(gameState.timerInterval);
-            
-            const distance = calculateDistance(
-                coords.lat, coords.lng,
-                gameState.currentLocation.coords[0], gameState.currentLocation.coords[1]
-            );
-            
+            const distance = calculateDistance(coords.lat, coords.lng, gameState.currentLocation.coords[0], gameState.currentLocation.coords[1]);
             processGuess(coords, distance);
         }
 
         function handleTimeout() {
             clearInterval(gameState.timerInterval);
-            const distance = 20000; // Maximum penalty
-            const coords = { lat: 0, lng: 0 };
-            processGuess(coords, distance, true);
+            processGuess({ lat: 0, lng: 0 }, 20000, true);
         }
 
         function processGuess(guessCoords, distance, isTimeout = false) {
@@ -782,39 +1083,50 @@
             const accuracy = Math.max(0, (maxDistance - distance) / maxDistance * 100);
             const baseScore = Math.round((maxDistance - distance) / maxDistance * CONFIG.MAX_SCORE_PER_ROUND);
             const difficultyMultiplier = CONFIG.DIFFICULTY_SETTINGS[gameState.difficulty].multiplier;
-            const roundScore = Math.round(baseScore * difficultyMultiplier);
+            let roundScore = Math.round(baseScore * difficultyMultiplier * gameState.multiplier);
             
-            gameState.totalScore += roundScore;
+            gameState.totalGuesses++;
+            gameState.accuracyHistory.push(accuracy);
             
-            // Update streak
-            if (accuracy > 50) {
+            const isCorrect = accuracy > 25 && !isTimeout;
+            
+            if (isCorrect) {
+                gameState.totalCorrect++;
                 gameState.streak++;
+                if (accuracy >= 95) gameState.perfectStreak++;
+                else gameState.perfectStreak = 0;
+                
+                gameState.totalScore += roundScore;
+                showFloatingScore(roundScore);
             } else {
+                const penalty = isTimeout ? CONFIG.DIFFICULTY_SETTINGS[gameState.difficulty].wrongPenalty : CONFIG.WRONG_PENALTY;
+                gameState.totalScore -= penalty;
                 gameState.streak = 0;
+                gameState.perfectStreak = 0;
+                gameState.multiplier = 1;
+                gameState.lives--;
+                
+                showFloatingScore(-penalty);
+                if (gameState.isAudioEnabled) playBeep(150, 0.8);
             }
             
-            // Show floating score
-            showFloatingScore(roundScore);
+            updateMultiplier();
+            updateLivesDisplay();
+            checkAchievements();
             
-            // Play sound feedback
-            if (gameState.isAudioEnabled) {
-                if (accuracy > 75) {
-                    playBeep(880, 0.2); // High success
-                } else if (accuracy > 25) {
-                    playBeep(440, 0.3); // Medium
-                } else {
-                    playBeep(220, 0.4); // Low/fail
-                }
+            if (gameState.isAudioEnabled && isCorrect) {
+                if (accuracy > 90) playBeep(880, 0.2);
+                else if (accuracy > 60) playBeep(660, 0.3);
+                else playBeep(440, 0.4);
             }
             
-            // Check game over
-            if (gameState.totalScore <= 0) {
-                gameState.totalScore = 0;
+            if (gameState.lives <= 0 || gameState.totalScore <= 0) {
+                gameState.totalScore = Math.max(0, gameState.totalScore);
                 showGameOver();
                 return;
             }
             
-            showRoundResult(guessCoords, distance, roundScore, accuracy, isTimeout);
+            showRoundResult(guessCoords, distance, isCorrect ? roundScore : -CONFIG.WRONG_PENALTY, accuracy, isTimeout);
         }
 
         function showFloatingScore(score) {
@@ -822,18 +1134,14 @@
             scoreElement.className = `score-change ${score >= 0 ? 'score-positive' : 'score-negative'}`;
             scoreElement.textContent = `${score >= 0 ? '+' : ''}${score}`;
             document.body.appendChild(scoreElement);
-            
             setTimeout(() => {
-                if (scoreElement.parentNode) {
-                    scoreElement.parentNode.removeChild(scoreElement);
-                }
+                if (scoreElement.parentNode) scoreElement.parentNode.removeChild(scoreElement);
             }, 2000);
         }
 
         function showRoundResult(guessCoords, distance, score, accuracy, isTimeout) {
             const answerCoords = gameState.currentLocation.coords;
             
-            // Add markers to map
             if (!isTimeout) {
                 guessMarker = L.marker([guessCoords.lat, guessCoords.lng]).addTo(leafletMap);
             }
@@ -848,18 +1156,12 @@
             
             if (!isTimeout) {
                 const color = accuracy > 75 ? '#39ff14' : accuracy > 50 ? '#00f5ff' : '#ff073a';
-                resultLine = L.polyline([[guessCoords.lat, guessCoords.lng], answerCoords], {
-                    color: color,
-                    weight: 3,
-                    opacity: 0.8
-                }).addTo(leafletMap);
-                
+                resultLine = L.polyline([[guessCoords.lat, guessCoords.lng], answerCoords], { color, weight: 3, opacity: 0.8 }).addTo(leafletMap);
                 leafletMap.fitBounds(resultLine.getBounds().pad(0.2));
             } else {
                 leafletMap.setView(answerCoords, 6);
             }
             
-            // Update result overlay
             elements.resultDistance.textContent = isTimeout ? 'Time\'s Up!' : `${Math.round(distance)} km away`;
             elements.resultScoreText.textContent = `Score: ${score >= 0 ? '+' : ''}${score}`;
             elements.resultScoreText.style.color = score >= 0 ? (gameState.isDarkTheme ? 'var(--dark-success)' : 'var(--light-success)') : (gameState.isDarkTheme ? 'var(--dark-danger)' : 'var(--light-danger)');
@@ -870,18 +1172,10 @@
         }
 
         function cleanupMarkers() {
-            if (guessMarker) {
-                leafletMap.removeLayer(guessMarker);
-                guessMarker = null;
-            }
-            if (answerMarker) {
-                leafletMap.removeLayer(answerMarker);
-                answerMarker = null;
-            }
-            if (resultLine) {
-                leafletMap.removeLayer(resultLine);
-                resultLine = null;
-            }
+            if (guessMarker) leafletMap.removeLayer(guessMarker);
+            if (answerMarker) leafletMap.removeLayer(answerMarker);
+            if (resultLine) leafletMap.removeLayer(resultLine);
+            guessMarker = answerMarker = resultLine = null;
         }
 
         function nextRound() {
@@ -892,15 +1186,15 @@
         function skipRound() {
             gameState.totalScore -= CONFIG.SKIP_PENALTY;
             gameState.streak = 0;
+            gameState.multiplier = 1;
             showFloatingScore(-CONFIG.SKIP_PENALTY);
             
             if (gameState.totalScore <= 0) {
                 gameState.totalScore = 0;
                 showGameOver();
-                return;
+            } else {
+                nextRound();
             }
-            
-            nextRound();
         }
 
         function showGameOver() {
@@ -908,27 +1202,49 @@
             
             const highScoreKey = `highScore_${gameState.gameMode}_${gameState.difficulty}`;
             const currentHighScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
-            const isNewHighScore = gameState.totalScore > currentHighScore;
             
-            if (isNewHighScore) {
+            if (gameState.totalScore > currentHighScore) {
                 localStorage.setItem(highScoreKey, gameState.totalScore);
                 elements.highScoreMessage.style.display = 'block';
             } else {
                 elements.highScoreMessage.style.display = 'none';
             }
             
+            const unlockedAchievements = gameState.achievements.filter(a => a.unlocked);
+            elements.finalAchievements.innerHTML = `
+                <h3>Achievement Summary</h3>
+                <p>Unlocked: ${unlockedAchievements.length}/${gameState.achievements.length}</p>
+                <p>Accuracy: ${gameState.totalGuesses > 0 ? Math.round((gameState.totalCorrect / gameState.totalGuesses) * 100) : 0}%</p>
+            `;
+            
             elements.finalScore.textContent = gameState.totalScore;
             elements.gameOverScreen.style.display = 'block';
+        }
+
+        function shareScore() {
+            const text = `🌍 I scored ${gameState.totalScore} in GeoChallenge Ultimate! Mode: ${gameState.gameMode}, Rounds: ${gameState.round - 1}. Can you beat me? 🏆`;
+            if (navigator.share) {
+                navigator.share({ title: 'GeoChallenge Ultimate Score', text, url: window.location.href });
+            } else {
+                navigator.clipboard.writeText(text).then(() => alert('Score copied to clipboard!'));
+            }
         }
 
         function resetGame() {
             gameState.totalScore = CONFIG.STARTING_SCORE;
             gameState.round = 1;
             gameState.streak = 0;
+            gameState.lives = CONFIG.STARTING_LIVES;
+            gameState.multiplier = 1;
+            gameState.perfectStreak = 0;
+            gameState.totalCorrect = 0;
+            gameState.totalGuesses = 0;
+            gameState.accuracyHistory = [];
             
             elements.gameOverScreen.style.display = 'none';
             cleanupMarkers();
             updateUI();
+            updateAchievementsDisplay();
             startRound();
         }
 
@@ -936,52 +1252,37 @@
             elements.currentScore.textContent = gameState.totalScore;
             elements.roundCounter.textContent = gameState.round;
             elements.streakCounter.textContent = gameState.streak;
+            elements.multiplierValue.textContent = `${gameState.multiplier}x`;
             
             const highScoreKey = `highScore_${gameState.gameMode}_${gameState.difficulty}`;
-            const highScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
-            elements.highScore.textContent = highScore;
+            elements.highScore.textContent = parseInt(localStorage.getItem(highScoreKey)) || 0;
+            
+            updateLivesDisplay();
         }
 
         function toggleTheme() {
             gameState.isDarkTheme = !gameState.isDarkTheme;
+            document.body.className = gameState.isDarkTheme ? 'dark-theme' : 'light-theme';
+            elements.themeToggle.textContent = gameState.isDarkTheme ? '☀️ Day Mode' : '🌙 Night Mode';
             
             if (gameState.isDarkTheme) {
-                document.body.className = 'dark-theme';
-                elements.themeToggle.textContent = '☀️ Day Mode';
-                
-                // Switch to dark map tiles
-                if (leafletMap.hasLayer(lightTileLayer)) {
-                    leafletMap.removeLayer(lightTileLayer);
-                }
-                if (!leafletMap.hasLayer(darkTileLayer)) {
-                    leafletMap.addLayer(darkTileLayer);
-                }
+                if (leafletMap.hasLayer(lightTileLayer)) leafletMap.removeLayer(lightTileLayer);
+                if (!leafletMap.hasLayer(darkTileLayer)) leafletMap.addLayer(darkTileLayer);
             } else {
-                document.body.className = 'light-theme';
-                elements.themeToggle.textContent = '🌙 Night Mode';
-                
-                // Switch to light map tiles
-                if (leafletMap.hasLayer(darkTileLayer)) {
-                    leafletMap.removeLayer(darkTileLayer);
-                }
-                if (!leafletMap.hasLayer(lightTileLayer)) {
-                    leafletMap.addLayer(lightTileLayer);
-                }
+                if (leafletMap.hasLayer(darkTileLayer)) leafletMap.removeLayer(darkTileLayer);
+                if (!leafletMap.hasLayer(lightTileLayer)) leafletMap.addLayer(lightTileLayer);
             }
-            
             localStorage.setItem('theme', gameState.isDarkTheme ? 'dark' : 'light');
         }
 
         function toggleAudio() {
             gameState.isAudioEnabled = !gameState.isAudioEnabled;
             elements.audioToggle.textContent = gameState.isAudioEnabled ? '🔊 Audio' : '🔇 Muted';
-            
             if (gameState.isAudioEnabled) {
-                elements.ambientAudio.play().catch(e => console.warn('Audio play failed:', e));
+                elements.ambientAudio.play().catch(e => {});
             } else {
                 elements.ambientAudio.pause();
             }
-            
             localStorage.setItem('audioEnabled', gameState.isAudioEnabled);
         }
 
@@ -989,23 +1290,18 @@
             const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
         // === AUDIO SYSTEM ===
         let audioContext;
-
         function initAudio() {
             if (!gameState.isAudioEnabled) return;
-
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 elements.ambientAudio.volume = 0.3;
-                elements.ambientAudio.play().catch(e => console.warn('Audio play failed:', e));
+                elements.ambientAudio.play().catch(e => {});
             } catch (error) {
                 console.warn('Audio not supported:', error);
             }
@@ -1013,43 +1309,47 @@
 
         function playBeep(frequency, duration) {
             if (!gameState.isAudioEnabled || !audioContext) return;
-            
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            
             osc.connect(gain);
             gain.connect(audioContext.destination);
-            
             osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
             osc.type = 'sine';
-            
             gain.gain.setValueAtTime(0.1, audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            
             osc.start();
             osc.stop(audioContext.currentTime + duration);
         }
 
         // === EVENT LISTENERS ===
         elements.themeToggle.addEventListener('click', toggleTheme);
-        
         elements.gameModeSelect.addEventListener('change', (e) => {
             gameState.gameMode = e.target.value;
+            if (!gameState.playedModes.includes(e.target.value)) gameState.playedModes.push(e.target.value);
             resetGame();
         });
-
         elements.difficultySelect.addEventListener('change', (e) => {
             gameState.difficulty = e.target.value;
-            updateUI();
+            resetGame(); // Reset on difficulty change to update high score display and timer
         });
-
         elements.audioToggle.addEventListener('click', toggleAudio);
         elements.nextRoundBtn.addEventListener('click', nextRound);
         elements.skipRoundBtn.addEventListener('click', skipRound);
         elements.restartBtn.addEventListener('click', resetGame);
+        elements.shareScoreBtn.addEventListener('click', shareScore);
         elements.modeChangeBtn.addEventListener('click', () => {
             elements.gameOverScreen.style.display = 'none';
         });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && elements.resultOverlay.style.display === 'block') { e.preventDefault(); nextRound(); }
+            if (e.key === 's' && elements.resultOverlay.style.display === 'block') { e.preventDefault(); skipRound(); }
+            if (e.key === 'r' && elements.gameOverScreen.style.display === 'block') { e.preventDefault(); resetGame(); }
+        });
+        
+        function saveAchievements() {
+            localStorage.setItem('achievements', JSON.stringify(gameState.achievements.filter(a => a.unlocked)));
+        }
 
         // === INITIALIZATION ===
         async function initGame() {
@@ -1067,25 +1367,28 @@
                     gameState.isAudioEnabled = savedAudio === 'true';
                     elements.audioToggle.textContent = gameState.isAudioEnabled ? '🔊 Audio' : '🔇 Muted';
                 }
+
+                // Load saved achievements
+                const savedAchievements = JSON.parse(localStorage.getItem('achievements') || '[]');
+                savedAchievements.forEach(savedAch => {
+                    const gameAch = gameState.achievements.find(a => a.id === savedAch.id);
+                    if (gameAch) gameAch.unlocked = true;
+                });
                 
-                elements.loadingStatus.textContent = 'Setting up map...';
                 initLeaflet();
-                
-                await loadGameData();
+                await loadGameData(); // Await the data loading
                 
                 elements.loadingScreen.style.display = 'none';
                 elements.mapContainer.classList.add('loaded');
                 
-                // Initialize audio on first user interaction
-                document.addEventListener('click', () => {
-                    if (!audioContext) initAudio();
-                }, { once: true });
+                document.addEventListener('click', () => { if (!audioContext) initAudio(); }, { once: true });
                 
+                updateAchievementsDisplay();
                 resetGame();
                 
             } catch (error) {
                 console.error('Initialization failed:', error);
-                elements.loadingStatus.textContent = 'Failed to load. Please refresh the page.';
+                elements.loadingStatus.textContent = 'Initialization failed. Please refresh the page.';
             }
         }
 
